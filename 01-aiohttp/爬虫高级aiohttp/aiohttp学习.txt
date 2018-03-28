@@ -1,0 +1,86 @@
+一、介绍
+aiohttp 是一个异步 http 通讯的 服务端和客户端 框架
+
+项目地址：https://github.com/aio-libs/aiohttp
+官方网站：https://pypi.python.org/pypi/aiohttp
+官方文档：https://aiohttp.readthedocs.io/en/stable/
+官方教程：https://aiohttp.readthedocs.io/en/stable/tutorial.html#aiohttp-tutorial
+
+二、安装
+基于3.1.0
+1、使用 pip install aiohttp
+2、同时可以安装2个配套的 异步库，
+    pip install cchardet：文本识别的库
+    pip install aiodns： DNS 解析的库
+
+3、还有一些其他异步库，都不是很成熟，如文件操作的
+
+三、使用
+1、async ：
+协程 函数定义，都是  async def fun_name  这样定义。
+
+2、async with：
+协程 上下文管理器 函数 掉用哪个 async with aiohttp.ClientSession() as client
+
+3、await：
+在 协程函数内容，即  async def 定义的函数内部，调用所有 协程函数都是使用
+    await async_fun()
+    text = await response.text()
+
+4、loop
+loop = asyncio.get_event_loop()
+loop.run_until_complete(asyncio.gather(*tasks))
+loop.close() # 项目中多个loop时，不清楚的情况下，宁愿不调用这个close
+
+5、aiohttp.ClientSession
+参数(重点)：
+cookies :  用于传入指定的cookie，字典
+headers：  用于指定所有请求的默认headers
+trust_env: 是否获取系统的代理设置
+
+方法：
+get、post、head等
+方法的参数：
+ssl = None
+proxy = {}
+allow_redirects = True
+timeout：超时时间，单位秒。aiohttp的所有io操作，默认都是5分钟的超时时间
+
+params
+data
+json
+
+6、ClientResponse
+属性：
+status：200
+reason：ok
+method：get
+url：页面url
+cookies：http.cookies.SimpleCookie
+charset：页面的charset
+content_type：页面的content_type
+
+方法（记住，都是方法，调用的后面有小括号）：
+read()：返回bytes ， 等同于 requests中 content
+text(encoding=None)：页面的text， 可以带入编码
+json(encoding=None)：页面的内容json
+
+7、asyncio.Semaphore
+用于控制并发的数量，不是线程安全的。
+定义：sem = semaphore(10)
+调用：with await sem:
+
+注意事项：
+1、async 函数中 sleep 只能使用 asyncio.sleep()
+2、loop.close() ，如果是有多个 loop， 要特别注意，别互相弄混
+
+
+
+四、aio原理
+1、改写原本的阻塞的io 方法
+2、改成内核通知的方式，从之前等待，改成类似回调函数，执行io命令之后，挂起本函数，并且执行下一个 task
+3、当io事件完成或者异常时，通过系统通知之前注册事件并且挂起的函数，继续执行
+
+
+备注：
+gevent，是搭配 requests的， 不要和aiohttp混合！
