@@ -1,0 +1,331 @@
+一、介绍
+scrapy 是一个开源和协作的框架，用于爬虫。
+以快速、简单、可扩展的方式。
+
+项目地址：https://github.com/scrapy/scrapy
+官方网站：https://scrapy.org/
+官方文档：https://docs.scrapy.org/en/latest/
+官方教程：https://docs.scrapy.org/en/latest/intro/tutorial.html
+
+二、安装
+基于 1.5.0
+使用 pip install scrapy
+
+三、各个模块
+1、setting，配置文件
+ROBOTSTXT_OBEY = Ture，是否遵守 robots.txt，一般修改为False
+DEFAULT_REQUEST_HEADERS ： 默认的请求headers
+SPIDER_MIDDLEWARES：爬虫中间层
+DOWNLOADER_MIDDLEWARES：下载中间层
+ITEM_PIPELINES = {'项目名.pipelines.PipeLine类名': 300,}
+
+# 开发模式时，把下面的注释取消掉，启用缓存，可以提高调试效率
+# 同样的氢气，如果 缓存 当中有保存内容的话，不会去进行网络请求，直接从缓存中返回
+# 记住：开发环境下启用！！！！部署时一定要注释掉！！！
+#HTTPCACHE_ENABLED = True
+#HTTPCACHE_EXPIRATION_SECS = 0
+#HTTPCACHE_DIR = 'httpcache'
+#HTTPCACHE_IGNORE_HTTP_CODES = []
+#HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+# 日志管理
+LOG_ENABLED 默认: True，启用logging
+LOG_ENCODING 默认: 'utf-8'，logging使用的编码
+LOG_FILE 默认: None，在当前目录里创建logging输出文件的文件名，例如：LOG_FILE = 'log.txt'
+    配置了这个文件，就不会在控制台输出日志了
+LOG_LEVEL 默认: 'DEBUG'，log的最低级别，共五级：
+    CRITICAL - 严重错误
+    ERROR - 一般错误
+    WARNING - 警告信息
+    INFO - 一般信息
+    DEBUG - 调试信息
+LOG_STDOUT 默认: False 如果为 True，进程所有的标准输出(及错误)将会被重定向到log中。
+        例如，执行 print("hello") ，其将会在Scrapy log中显示
+
+# 并发 ,现在 = 号右边的 value 就是默认值
+CONCURRENT_ITEMS = 100 #  并发处理 items 的最大数量
+CONCURRENT_REQUESTS = 16  #  并发下载request页面的最大数量
+CONCURRENT_REQUESTS_PER_DOMAIN = 8 # 并发下载任何单域的最大数量
+CONCURRENT_REQUESTS_PER_IP = 0 # 并发 每个IP 请求的最大数量
+DOWNLOAD_DELAY = 0.25 # 单位秒，支持小数，一般都是随机范围：
+                        0.5*DOWNLOAD_DELAY 到 1.5*DOWNLOAD_DELAY 之间
+                        CONCURRENT_REQUESTS_PER_IP 不为0时，这个延时是针对每个IP，而不是每个域
+
+2、爬虫类，继承自scrapy.Spider，用于构造Request对象给Scheduler
+属性
+name：爬虫的名字，必须唯一  ，必须写！
+start_urls：爬虫初始爬取的链接列表
+
+custom_setting = {} # 自定义的setting配置
+
+方法
+start_requests：启动爬虫的时候调用，爬取urls的链接，可以省略
+parse：response到达spider的时候默认调用，如果在Request对象配置了callback函数，则不会调用，
+    parse方法可以迭代返回Item或Request对象，如果返回Request对象，则会进行增量爬取
+
+3、items
+定义：
+class Product(scrapy.Item):
+    name = scrapy.Field()
+    title = scrapy.Field()
+
+调用：
+和dict一样的调用
+product = Product(name='Desktop PC', title='pc title')
+
+# 像字典一样的使用：
+print(product['name'])
+print(product.get('name'))
+product['title'] = 'new title'
+
+可以这样转换为字典：dict(product)
+
+4、pipelines
+必须在settings中，添加
+ITEM_PIPELINES = {
+    'first_scrapy.pipelines.FirstScrapyPipeline': 300, # 优先级，数字越小，
+                                                    优先级越高，越早调用范围 0-1000
+}
+
+对象如下：
+class FirstScrapyPipeline(object):
+
+    def process_item(self, item, spider):
+        return item
+
+方法：
+process_item(self, item, spider)： 处理item的方法， 必须有的！！！
+参数：
+item (Item object or a dict) ： 获取到的item
+spider (Spider object) ： 获取到item的spider
+返回    一个dict或者item
+
+open_spider(self, spider) ： 当spider启动时，调用这个方法
+参数：
+spider (Spider object) – 启动的spider
+
+close_spider(self, spider)： 当spider关闭时，调用这个方法
+参数：
+spider (Spider object) – 关闭的spider
+
+@classmethod
+from_crawler(cls, crawler)
+参数：
+crawler (Crawler object) – 使用这个pipe的爬虫crawler
+
+4.1  返回 item 的例子：
+from scrapy.exceptions import DropItem
+
+class PricePipeline(object):
+
+    vat_factor = 1.15
+
+    def process_item(self, item, spider):
+        if item['price']:
+            if item['price_excludes_vat']:
+                item['price'] = item['price'] * self.vat_factor
+            return item
+        else:
+            raise DropItem("Missing price in %s" % item)
+
+4.2 写入文件的例子：
+import json
+
+class JsonWriterPipeline(object):
+
+    def open_spider(self, spider):
+        self.file = open('items.jl', 'w')
+
+    def close_spider(self, spider):
+        self.file.close()
+
+    def process_item(self, item, spider):
+        line = json.dumps(dict(item)) + "\n"
+        self.file.write(line)
+        return item
+
+4.3 写入 mongodb 的例子：
+import pymongo
+
+class MongoPipeline(object):
+
+    collection_name = 'scrapy_items'
+
+    def __init__(self, mongo_uri, mongo_db):
+        self.mongo_uri = mongo_uri
+        self.mongo_db = mongo_db
+
+    @classmethod
+    def from_crawler(cls, crawler):
+         #  必须在settings中 配置 MONGO_URI 和 MONGO_DATABASE
+        return cls(
+            mongo_uri=crawler.settings.get('MONGO_URI'),
+            # items 是默认值，如果settings当中没有配置 MONGO_DATABASE ，那么 mongo_db = 'items'
+            mongo_db=crawler.settings.get('MONGO_DATABASE', 'items')
+        )
+
+    def open_spider(self, spider):
+        self.client = pymongo.MongoClient(self.mongo_uri)
+        self.db = self.client[self.mongo_db]
+
+    def close_spider(self, spider):
+        self.client.close()
+
+    def process_item(self, item, spider):
+        self.db[self.collection_name].insert_one(dict(item))
+        return item
+
+4.4  网页快照的例子
+import scrapy
+import hashlib
+from urllib.parse import quote
+
+
+class ScreenshotPipeline(object):
+    """Pipeline that uses Splash to render screenshot of
+    every Scrapy item."""
+
+    SPLASH_URL = "http://localhost:8050/render.png?url={}"
+
+    def process_item(self, item, spider):
+        encoded_item_url = quote(item["url"])
+        screenshot_url = self.SPLASH_URL.format(encoded_item_url)
+        request = scrapy.Request(screenshot_url)
+        dfd = spider.crawler.engine.download(request, spider)
+        dfd.addBoth(self.return_item, item)
+        return dfd
+
+    def return_item(self, response, item):
+        if response.status != 200:
+            # Error happened, return item.
+            return item
+
+        # Save screenshot to file, filename will be hash of url.
+        url = item["url"]
+        url_hash = hashlib.md5(url.encode("utf8")).hexdigest()
+        filename = "{}.png".format(url_hash)
+        with open(filename, "wb") as f:
+            f.write(response.body)
+
+        # Store filename in item.
+        item["screenshot_filename"] = filename
+        return item
+
+4.5 去重复值的pipe
+from scrapy.exceptions import DropItem
+
+class DuplicatesPipeline(object):
+
+    def __init__(self):
+        self.ids_seen = set()
+
+    def process_item(self, item, spider):
+        if item['id'] in self.ids_seen:
+            raise DropItem("Duplicate item found: %s" % item)
+        else:
+            self.ids_seen.add(item['id'])
+            return item
+
+四、第一个项目
+1、在命令行中，切换到 项目目录：譬如，f:\py_study>
+    执行命令：scrapy startproject first_scrapy
+    将在 f:\py_study 路径下建立一个 first_scrapy 项目文件夹
+    文件夹结构如下：
+scrapy.cfg            # 部署的配置文件
+    first_scrapy/
+        __init__.py
+        items.py          # 定义我们需要的结构化数据，和ORM有点类似，使用相当于dict
+
+        middlewares.py    # 中间件，相当于钩子，可以对爬取前后做预处理，如修改请求header，url过滤等
+                               分 downloadermiddleware、spidermiddleware、schedulermiddleware
+        pipelines.py      # 数据处理，将items中结构化的数据进行处理
+
+        settings.py       # 项目配置文件，key=value 的方式，key必须全部大写！
+                            包括所有的配置，一些公用的常量也可以写在里面
+
+        spiders/          # 爬虫模块的目录，负责配置需要爬取的数据和爬取规则，以及解析数据，
+                            并且把结构化数据，return 到 pipelines 模块处理
+            __init__.py
+
+2、在 spiders 中新建：
+quotes.py：
+
+import scrapy
+
+# 必须继承 scrapy.Spider
+class QuotesSpider(scrapy.Spider):
+    # 用于区别Spider。 该名字必须是唯一的，您不可以为不同的Spider设定相同的名字。
+    name = "quotes"
+
+    def start_requests(self):
+        # 包含了Spider在启动时进行爬取的url列表。 因此，第一个被获取到的页面将是其中之一。
+        # 后续的URL则从初始的URL获取到的数据中提取。
+        urls = [
+            'http://quotes.toscrape.com/page/1/',
+            'http://quotes.toscrape.com/page/2/',
+        ]
+        for url in urls:
+            # 必须使用 yield
+            # Request 是 scrapy 自定义的类
+            # callback， 获取到response 之后的 回调函数
+            yield scrapy.Request(url=url, callback=self.parse)
+
+    # 是spider的一个方法。 被调用时，每个初始URL完成下载后生成的 Response 对象将会作为唯一的参数传递给该函数。
+    def parse(self, response):
+        page = response.url.split("/")[-2]
+        filename = 'quotes-%s.html' % page
+        with open(filename, 'wb') as f:
+            f.write(response.body)
+        self.log('Saved file %s' % filename)
+
+或
+
+class BlogSpider(scrapy.Spider):
+    name = 'blogspider'
+    # 允许访问的域名，可以不写
+    allowed_domains = ['scrapinghub.com']
+    start_urls = ['https://blog.scrapinghub.com']
+
+    def parse(self, response):
+        for title in response.css('h2.entry-title'):
+            yield {'title': title.css('a ::text').extract_first()}
+
+        for next_page in response.css('div.prev-post > a'):
+            yield response.follow(next_page, self.parse)
+
+
+四、运行
+1、命令行中运行：
+命令行 中 进入到 first_scrapy 目录中，执行：
+scrapy crawl quotes
+
+2、pycharm 运行
+在 项目 根目录 添加 run.py 文件：
+from first_scrapy.spiders.quotes import QuotesSpider
+from scrapy.crawler import CrawlerProcess
+from scrapy.utils.project import get_project_settings
+
+# 获取settings.py模块的设置
+settings = get_project_settings()
+process = CrawlerProcess(settings=settings)
+
+# 可以添加多个spider
+# process.crawl(Spider1)
+# process.crawl(Spider2)
+process.crawl(QuotesSpider)
+
+# 启动爬虫，会阻塞，直到爬取完成
+process.start()
+
+或者：
+
+from scrapy.cmdline import execute
+
+#设置工程命令
+import sys
+import os
+#设置工程路径，在cmd 命令更改路径而执行scrapy命令调试
+#获取run文件的父目录，os.path.abspath(__file__) 为__file__文件目录
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+execute(["scrapy","crawl","quotes" ])
+
