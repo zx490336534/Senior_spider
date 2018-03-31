@@ -1,0 +1,6 @@
+1、在cmd中 scrapy start dingdian
+2、在 pycharm 中加载 dingdian 项目
+3、在 item 中定义好 DingdianItem
+4、在 spiders 中 定义 DingdianSpider
+5、在 settings 配置 pipeline
+6、在 pipeline 中 编写 DingdianScrapyPipeline ，进行数据持久化
