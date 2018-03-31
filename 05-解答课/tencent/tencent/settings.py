@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for Tanzhou project
+# Scrapy settings for tencent project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -9,14 +9,14 @@
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'Tanzhou'
+BOT_NAME = 'tencent'
 
-SPIDER_MODULES = ['Tanzhou.spiders']
-NEWSPIDER_MODULE = 'Tanzhou.spiders'
+SPIDER_MODULES = ['tencent.spiders']
+NEWSPIDER_MODULE = 'tencent.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = 'Tanzhou (+http://www.yourdomain.com)'
+#USER_AGENT = 'tencent (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -47,13 +47,13 @@ ROBOTSTXT_OBEY = True
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'Tanzhou.middlewares.TanzhouSpiderMiddleware': 543,
+#    'tencent.middlewares.TencentSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
-#    'Tanzhou.middlewares.TanzhouDownloaderMiddleware': 543,
+#    'tencent.middlewares.TencentDownloaderMiddleware': 543,
 #}
 
 # Enable or disable extensions
@@ -64,9 +64,9 @@ ROBOTSTXT_OBEY = True
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-   'Tanzhou.pipelines.TanzhouPipeline': 300,
-}
+#ITEM_PIPELINES = {
+#    'tencent.pipelines.TencentPipeline': 300,
+#}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
