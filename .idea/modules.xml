@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../../py/spider/dingdian/.idea/dingdian.iml" filepath="$PROJECT_DIR$/../../py/spider/dingdian/.idea/dingdian.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/python爬虫高阶.iml" filepath="$PROJECT_DIR$/.idea/python爬虫高阶.iml" />
     </modules>
   </component>
