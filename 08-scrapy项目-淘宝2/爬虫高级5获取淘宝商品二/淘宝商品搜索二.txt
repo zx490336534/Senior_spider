@@ -1,0 +1,86 @@
+一、实现多个pipeline
+TaobaoItem 内获取了  价格、收货人数、商品名、商铺名、发货地址、详情链接  这些内容
+然后进行数据分析是一般是需要一些关键的key，譬如 商品的唯一的key，商铺的唯一的key
+分析数据得出：
+    auctions 列表中：
+    user_id 是商铺的唯一ID
+    nid 是商品的唯一ID
+
+    在item中增加这2个 field
+
+再次分析，需要把 item_loc 进行拆分为 province和city， 并且要把 sales 内容中的 人收货 去掉
+
+综上所述，需要新增一个 pipeline，来实现这些需求，并且需要在 settings 中修改配置
+
+其实这个 pipeline 中的代码也可以在spider 中实现，效果一样，但是不建议大家那样实现，
+因为会造成强耦合，而且分层不合理。
+
+
+二、定时启动scrapy
+scrapy本身不提供定时启动！
+要实现的话，使用第三方的方式
+
+写一个 定时启动的 run.py 就可以了：
+看代码
+
+三、过滤重复的url
+scrapy，默认就是过滤重复的url的
+scrapy.Request(url, callback=self.parse) 生成一个 request 的时候，
+    dont_filter 这个参数就是判断是否过滤重复的url，
+    默认为 False， 是过滤重复参数的
+        过滤的条件是3个：
+        分析源码：
+            fp = hashlib.sha1()
+            fp.update(to_bytes(request.method))
+            fp.update(to_bytes(canonicalize_url(request.url)))
+            fp.update(request.body or b'')
+        1、请求的 method
+        2、url
+        3、请求的 body， 只有post方法才有这个值，其他为 空 ''
+
+    当不需要过滤的时候，设置此参数为 True就好
+    scrapy.Request(url, callback=self.parse, dont_filter=True)
+
+
+循环任务的注意事项：
+譬如每天 0 点执行任务
+1、第一个任务0点执行，到第2个 0 点时， 任务1没处理完，怎么处理？
+    1.1 当前存在正在运行的任务，不启动新的任务，直到 任务1 完成！
+          1.1.1 任务1完成后，立刻执行下一次 任务，因为已经耽搁了时间了！
+          1.1.1 任务1完成后，继续等待到下一个 0 点，启动任务！
+    1.2 当前存在正在运行的任务，启动新任务：
+        1.2.1 干掉 任务1， 启动任务2
+        1.2.2 不理睬 任务1， 以一个新进程开启 任务2
+
+
+
+四、设置headers
+1、最简单的，就是在settings中配置默认的
+2、譬如要随机使用user-agent，那么就需要在 middleware 中进行处理
+    2.1、 在settings中配置常量：user_agents
+    2.2、 在 middleware 中实现一个 UserAgentDownloaderMiddleware
+    2.3、 在 settings 中配置 UserAgentDownloaderMiddleware
+
+
+五、设置proxy
+1、 在settings中配置常量： proxy
+2、 在 middleware 中实现一个 ProxyDownloaderMiddleware
+3、 在 settings 中配置 ProxyDownloaderMiddleware
+
+
+注意事项
+1、使用框架时，很多的规则是需要遵守的，没有道理可言，就是框架默认的，
+    譬如：spider：start_urls、start_requests、parse
+          pipeline；process_item
+          middleware：Process_request
+
+          等等
+
+    都是固定的名称，和固定的参数，不要修改！
+
+2、写数据库，日期类型：尽量只写2种类型
+    2.1、时间戳， 152*******  10位的时间戳
+    2.2、字符串方式，格式可以根据需求，常见的：
+        20180407212130，2018-04-07 21:21:30，2018/04/07 21:21:30
+
+3、一般不使用到 spidermiddleware，使用的多的是 downloadermiddleware
