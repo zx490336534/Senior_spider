@@ -1,0 +1,104 @@
+一、抓包
+首先确保手机和电脑在同一个网络
+1、安装fiddler，并且进行配置：
+    Tools >> options >> connections >> 勾选 allow remote computers to connect
+
+2、查看本机ip地址，
+    在cmd窗口中，输入 ipconfig  ，查看  以太网 ，可以看到
+    IPv4 地址...............：192.168.0.104
+    这个192.168.*.***（192.168.0.104） 就是你的本机IP
+
+3、确保手机连接了wifi，并且和电脑是在同一个局域网，
+    在手机中，打开浏览器，访问
+    http://192.168.0.104:8888
+    IP：是第二步查看到的ip地址，替换成你自己的IP
+    port：8888是你在fiddler中配置的
+    注意：有些浏览器会显示打不开，更换其他浏览器就可以了
+
+4、访问成功的话，会显示：
+    Fiddler Echo Service
+    ......
+    ......
+    This page returned a HTTP/200 response
+    .To configure fiddler as a reverse proxy instead of seeing this
+     page, see Reverse Proxy Setup
+    .You can download the FiddlerRoot certificate
+
+5、点击  FiddlerRoot certificate ， 下载 证书
+
+6、安装 证书
+    6.1 部分手机可以直接点击 安装
+    6.2 部分手机需要 设置 >> wifi(或WLAN) >> 高级设置 >> 安装证书 >>
+            选中刚刚下载的 证书文件 FiddlerRoot.cer >> 确定
+    6.3 设置(Settings) >> 更多设置 >> 系统安全 >> 从存储设备安装
+
+    6.4 为证书命名 , 输入自己喜欢的名字，譬如 fiddler  ，确定 ，  显示 证书安装完成
+
+    6.5 安装完成后，在 设置(Settings) >> 更多设置 >> 系统安全 >> 信任的凭证 >>
+        系统和用户2个tab页 >> 用户 >> 可以查看到 DO_NOT_RUST_FiddlerRoot
+
+PS: 不安装证书，抓取http的数据是没问题的，但是抓取不了https的数据
+
+7、手机设置代理
+    手机设置 >> wifi(或WLAN) >>  选中连接的网络 >> 代理 >> 手动
+    主机名：192.168.0.104    这个是刚刚在 cmd 中查看到的电脑的 IP
+    端口  ：8888
+    不使用网址： 这个不用理会
+
+    修改完成后，确认
+
+8、打开 fiddler 的抓包，然后在手机端运行要抓包的app，会查看到fiddler中已经可以抓到app的数据了
+
+二、示例
+爬取 王者荣耀盒子 的信息
+1、打开 王者荣耀盒子
+2、点击右下角的 辅助
+3、点击 英雄排行
+4、譬如：排行第一个的是武则天
+    但是在数据包中发现，中文都变成 \u  这样的 unicode编码了，进行搜索的话，
+    直接搜索 中文 武则天，会搜索不到,
+    在 python 中，得到 武则天 的unicode，
+        代码： '武则天'.encode('unicode-escape')
+        得到：b'\\u6b66\\u5219\\u5929'
+        处理为： \u6b66\u5219\u5929
+
+三、实现
+import requests
+
+s = requests.session()
+s.trust_env = False
+s.verify = False
+s.headers = {
+    'Accept-Charset': 'UTF-8;',
+    'Accept-Encoding': 'gzip,deflate',
+    'Content-type': 'application/x-www-form-urlencoded',
+    'X-Requested-With': 'XMLHttpRequest',
+    'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 7.1.1; MI 6 MIUI/V9.2.4.0.NCACNEK)',
+    'Connection': 'Keep-Alive'
+}
+
+url = 'http://gamehelper.gm825.com/wzry/hero/ranking?channel_id=90009a&app_id=h9044j&game_id=7622&game_name=%E7%8E%8B%E8%80%85%E8%8D%A3%E8%80%80&vcode=12.2.0.1&version_code=12201&cuid=559649C74CA93E75A8D328E0797678F7&ovr=7.1.1&device=Xiaomi_MI+6&net_type=1&client_id=c1uYGXluwjTh5e2NCXy9Jg%3D%3D&info_ms=%2BsDuon4TQ%2FohxVyJ5XgvZw%3D%3D&info_ma=Ax7x%2F%2BHQLCEI2EuUAo%2BgPpmL1vfhOApBdv3jflaCrwI%3D&mno=0&info_la=5kkYPqJY%2F%2BojZKFRdmp0sw%3D%3D&info_ci=5kkYPqJY%2F%2BojZKFRdmp0sw%3D%3D&mcc=0&clientversion=12.2.0.1&bssid=BDwn9VpvWlGlejslbWyGoWQ9BwkR29ifXKDZoaS8v8I%3D&os_level=25&os_id=ba2a10c82341ade3&resolution=1080_1920&dpi=480&client_ip=192.168.0.101&pdunid=aa4184'
+r = s.get(url)
+json_data = r.json()
+
+ranking_list = json_data['ranking_list']
+for i, ranking in enumerate(ranking_list):
+    print('排名：', i+1, '英雄名：', ranking['name'])
+
+    hero_id  = ranking['hero_id']
+    url = 'http://gamehelper.gm825.com/wzry/hero/detail?hero_id={}&channel_id=90009a&app_id=h9044j&game_id=7622&game_name=%E7%8E%8B%E8%80%85%E8%8D%A3%E8%80%80&vcode=12.2.0.1&version_code=12201&cuid=559649C74CA93E75A8D328E0797678F7&ovr=7.1.1&device=Xiaomi_MI+6&net_type=1&client_id=c1uYGXluwjTh5e2NCXy9Jg%3D%3D&info_ms=%2BsDuon4TQ%2FohxVyJ5XgvZw%3D%3D&info_ma=Ax7x%2F%2BHQLCEI2EuUAo%2BgPpmL1vfhOApBdv3jflaCrwI%3D&mno=0&info_la=5kkYPqJY%2F%2BojZKFRdmp0sw%3D%3D&info_ci=5kkYPqJY%2F%2BojZKFRdmp0sw%3D%3D&mcc=0&clientversion=12.2.0.1&bssid=BDwn9VpvWlGlejslbWyGoWQ9BwkR29ifXKDZoaS8v8I%3D&os_level=25&os_id=ba2a10c82341ade3&resolution=1080_1920&dpi=480&client_ip=192.168.0.101&pdunid=aa4184'
+    r = s.get(url.format(hero_id))
+
+    json_data = r.json()
+    # 铭文
+    rec_inscriptions = json_data['info']['rec_inscriptions']
+    print(rec_inscriptions)
+    # 大神出装
+    equip_choice = json_data['info']['equip_choice']
+    print(equip_choice)
+
+注意：
+1、大部分app都可以直接抓包
+2、少部分app没办法直接获取，需要 wireshark、反编译、脱壳 等方式去查找加密算法
+3、app抓包一般都是抓取到服务器返回的json数据包
+

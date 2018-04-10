@@ -1,0 +1,52 @@
+一、rules
+要学习rules
+1、scrapy.spiders.CrawlSpider:
+继承与 scrapy.Spider 这个类，最大的区别就是多了一个 rules 属性，
+用于爬取有规律的整站资料。获取整个网站的url连接，进行自动爬取，
+直到爬取到我们想要处理数据的页面
+
+工作流程：
+    1、设置好 start_urls ，引擎会自动调用 start_requests 对 start_urls 中 url发起请求
+    2、CrawlSpider 会自动调用 parse 去响应第一步的request获得的response 响应体，
+        会匹配url
+    3、根据Rule的配置，决定是否调用特定的 callback 或者 继续把 url 送入到第一步执行
+
+2、LinkExtractor
+用于匹配 url 连接，并且设置一些规则
+allow: 允许获取的url 的  正则表达式 匹配 ， 可以输入列表
+deny： 和allow 相反 ，不提取的 url 的正则表达式， 可以输入列表
+allow_domains： 允许的域名， 可以输入列表
+deny_domains： 不允许的域名， 可以输入列表
+restrict_xpaths： 接收提取url的 xpath ， 可以输入列表
+restrict_css： 接收提取url的 css 选择器， 可以输入列表
+tags：指定提取哪些 标签内的 url
+attrs： 指定提取哪些属性内的 url
+
+3、Rule
+参数说明：
+linkextractor：LinkExtractor 的一个实例
+callback：回调函数，这里一定要注意，不能使用 self.parse
+cb_kwargs： 回调函数的可变关键字参数 callback(response, **cb_kwargs)
+follow: 这个参数比较关键，使用的比较多， 继续提取 url，
+    我们可以去看源码，没有设置 callback 的时候， 会默认是 True
+process_links： 自定义的links处理函数，
+    譬如百万级的应用中途断掉了，你记得把 url 给保存起来，自定义这个函数，去重
+process_request： 自定义的request处理函数
+
+注意事项：
+1、使用crawlSpider，一般是不自己去实现 start_requests() 方法，
+都是通过 start_urls 这个配置启动
+2、settings中最下面的部分代码：
+HTTPCACHE_ENABLED = True
+HTTPCACHE_EXPIRATION_SECS = 0
+HTTPCACHE_DIR = 'httpcache'
+HTTPCACHE_IGNORE_HTTP_CODES = []
+HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+是用于调试页面时，使用缓存，不用每次都去请求网络获取页面，
+而是直接从缓存读取出来，进行测试处理
+会有弊端：
+1、你如果要抓包，是抓不到。因为根本没有到访问网络这一层
+2、不能用于百万级的应用
+3、保存的目录在 项目 根目录下的 .scrapy
+4、项目部署之后，必须关闭这个缓存！！
