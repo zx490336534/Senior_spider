@@ -10,3 +10,4 @@ from scrapy import signals
 
 class RenrenSpiderMiddleware(object):
     def process_requests(self,request,spider):
+        pass
