@@ -1,0 +1,37 @@
+1.登陆 拉勾网
+2.根据搜索关键字列表，查找岗位信息
+3.爬取的内容：
+    岗位名称
+    薪资：有一个范围，最低薪资和最高薪资
+    工作地点：城市
+    经验要求：1-3年，需要处理变成2个字段
+    学历要求：本科及以上，需要处理为单独：本科、专科等
+    工作性质：全职、兼职
+    发布时间
+    岗位职责
+    任职要求
+    工作地址
+    公司名称
+    公司首页
+
+
+开始：
+1.抓包
+    1.1清空浏览器缓存，开启隐身模式（ctrl+F5不一定保险，可能有些js不会再次下载）
+    1.2启动抓包工具，开启监听
+    1.3在浏览器中启用代理，访问目标网站
+    1.4登陆后，输入一次错误密码，再输入正确密码
+    1.5登陆成功以后，进行翻页，点开多个岗位信息，各种需要抓包的情况都抓一下
+    1.6停止抓包，清理数据包，把无关的干扰数据清除掉
+2.分析数据
+3.起始url：https://passport.lagou.com/login/login.html
+
+    https://passport.lagou.com/login/login.json
+        isValidate	true
+        username	15168230644
+        password	ec722eb0cb18f24f044af5f727625e39
+        request_form_verifyCode
+        submit
+
+    https://www.lgstatic.com/passport/static/pkg/pc/page/login/main.html_aio_bdf7227.js
+    解析后发现密码是先md5加密然后加上g = veenike后再次md5加密

@@ -1,0 +1,60 @@
+1、假设我们已经完成了我们的项目的开发
+2、在本地安装docker
+3、创建自己的docker image
+4、image创建好后，启动一个容器
+5、修改容器内的内容，修改scrapyd的配置项
+    绑定的ip从 127.0.0.1 修改为 0.0.0.0
+6、再根据容器生成一个新的iamge
+7、使用第六步生成的新的 image， 启动容器
+8、在容器中，执行： scrapyd ，启动我们的scrapyd
+9、修改我们项目的scrapy.cfg 文档，
+    [deploy:100]
+    url = http://192.168.99.100:6800/addversion.json
+    project = sr_test
+10、修改项目的 settings 文件
+    # 修改redis 所在机器的ip
+    REDIS_URL = 'redis://192.168.99.1:6379'
+11、修改redis数据库的 redis.windows.conf
+    配置项，
+    从 bind 127.0.0.1
+    修改为：
+    bind 0.0.0.0
+    PS：大家记住，如果不是在局域网，而是在internet中，那么这里的ip地址需要修改为外网地址
+    0.0.0.0  这个地址的作用，就是你连接机器的 6800 端口，如果没有其他的绑定应答，
+        最终全部会查询这个 0.0.0.0 ip上是否绑定了 6800 端口
+    譬如： 其他机器连 我的主机 ，连接的url是： 192.168.99.1:6379 ，那么首先会检测 我的主机 上
+    是否在 192.168.99.1 这个ip上绑定了 6379，如果没有找到，那么会继续 查询 我的主机 上，是否在
+    0.0.0.0 上绑定了 6379
+12、redis配置修改完成后，启动redis
+13、上传我们的项目到docker容器中的scrapyd中
+14、测试运行 我们的项目， 测试通过
+15、这里就有2个选择
+15.1 在新的已经上传好项目的容器的基础上，生成一个新的镜像，上传到服务器，
+    其他的爬虫机器全部下载这个镜像，进行运行（不推荐）
+15.2 把刚刚测试通过的新的 image 直接上传到服务器，其他爬虫机器下载，这种方式，
+    每一个爬虫服务器，都需要我们自己通过程序上传 scrapy 项目（推荐）
+
+    PS：上面的第二种方式，云服务器上是只有我们的运行环境，没有我们的代码
+        坏处就是每个爬虫服务器，我们都得上传项目到scrapyd
+16、已经上传到镜像到 阿里云或其他云服务器上
+    先改名：docker tag 186a34ea8e3d registry.cn-hangzhou.aliyuncs.com/mumutest/mumu
+    再上传：docker push registry.cn-hangzhou.aliyuncs.com/dtest/mumu
+17、在我们的爬虫服务器上 登录 云服务器的账号
+18、下载指定的image：
+    docker pull registry.cn-hangzhou.aliyuncs.com/dtest/mumu
+19、下载完成后，使用下载的image，启动容器就好了
+20、在启动的容器中，运行 scrapyd
+21、在本机的项目中，修改scrapy.cfg 配置文件，添加新的机器的deploy
+    [deploy:209]
+    url = http://192.168.0.209:6800/addversion.json
+    project = sr_test
+22、将项目部署到新的机器上
+    python scrapyd-deploy 209 -p dingdian
+23、通过 scrapyd 的命令，执行 新的机器 上的爬虫项目
+24、到这里，一个新的额爬虫机器的部署就完成了
+
+
+问题：
+1、如果运行环境中需要安装新的第三方模块，该如何更新docker中的运行环境了？
+答：在容器中安装新的模块，再次根据修改后的容器，生成新的镜像，上传到服务器，
+爬虫服务器更新新的镜像就好了
