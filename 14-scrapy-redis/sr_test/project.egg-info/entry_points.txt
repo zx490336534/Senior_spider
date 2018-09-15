@@ -1,0 +1,3 @@
+[scrapy]
+settings = sr_test.settings
+
